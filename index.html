@@ -6,6 +6,12 @@
   <title>Audio Tools</title>
 </head>
 <body>
+  <label for="speaker_1_frequency">Speaker 1 frequency (Hz):</label>
+  <input type="text" id="speaker_1_frequency" name="speaker_1_frequency">
+  <br>
+  <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
+  <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
+  <br>
   <button id="startButton">Play Tones</button>
   
   <script>
@@ -14,12 +20,14 @@
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
       // Create first oscillator (for left speaker)
+      const speaker1FrequencyInput = document.getElementById('speaker_1_frequency');
       const oscLeft = audioCtx.createOscillator();
-      oscLeft.frequency.value = 440; // A4
+      oscLeft.frequency.value = speaker1FrequencyInput.value;
 
       // Create second oscillator (for right speaker)
+      const speaker2FrequencyInput = document.getElementById('speaker_2_frequency');
       const oscRight = audioCtx.createOscillator();
-      oscRight.frequency.value = 660; // E5
+      oscRight.frequency.value = speaker2FrequencyInput.value;
 
       // Create stereo panners
       const pannerLeft = audioCtx.createStereoPanner();
