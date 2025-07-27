@@ -8,25 +8,47 @@
 </head>
 <body>
   <main class="container">
-    <label for="speaker_1_frequency">Speaker 1 frequency (Hz):</label>
-    <input type="text" id="speaker_1_frequency" name="speaker_1_frequency">
-    <br>
-    <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
-    <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
-    <br>
+    <fieldset>
+      <legend>Tone pattern:</legend>
+      <input type="radio" id="pattern_constant" name="pattern" checked />
+      <label htmlFor="pattern_constant">Constant</label>
+      <input type="radio" id="pattern_sweep" name="pattern" />
+      <label htmlFor="pattern_sweep">Sweep</label>
+    </fieldset>
+
+    <div id="settings_constant">
+      <label for="speaker_1_frequency">Speaker 1 frequency (Hz):</label>
+      <input type="text" id="speaker_1_frequency" name="speaker_1_frequency">
+      <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
+      <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
+    </div>
+
+    <div id="settings_sweep" hidden>
+      <label for="speaker_1_start_frequency">Speaker 1 start frequency (Hz):</label>
+      <input type="text" id="speaker_1_start_frequency" name="speaker_1_start_frequency">
+      <label for="speaker_1_stop_frequency">Speaker 1 stop frequency (Hz):</label>
+      <input type="text" id="speaker_1_stop_frequency" name="speaker_1_stop_frequency">
+      <label for="speaker_2_start_frequency">Speaker 2 start frequency (Hz):</label>
+      <input type="text" id="speaker_2_start_frequency" name="speaker_2_start_frequency">
+      <label for="speaker_2_stop_frequency">Speaker 2 stop frequency (Hz):</label>
+      <input type="text" id="speaker_2_stop_frequency" name="speaker_2_stop_frequency">
+      <label for="sweep_duration">Sweep duration (sec):</label>
+      <input type="text" id="sweep_duration" name="sweep_duration">
+    </div>
+
     <button id="startButton">Start playing</button>
   </main>
 
   <script>
     let isPlaying = false;
+    let pattern = 'constant';
     let audioCtx = null;
     let oscLeft = null;
     let oscRight = null;
     let pannerLeft = null;
     let pannerRight = null;
 
-    const speaker1FrequencyInput = document.getElementById('speaker_1_frequency');
-    const speaker2FrequencyInput = document.getElementById('speaker_2_frequency');
+    let configuration = {};
     const startButton = document.getElementById('startButton');
 
     startButton.addEventListener('click', () => {
@@ -45,41 +67,131 @@
     function initAudio() {
       // Create an audio context
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      // Create first oscillator (for left speaker)
-      oscLeft = audioCtx.createOscillator();
-
-      // Create second oscillator (for right speaker)
-      oscRight = audioCtx.createOscillator();
-
-      // Create stereo panners
-      pannerLeft = audioCtx.createStereoPanner();
-      pannerRight = audioCtx.createStereoPanner();
-
-      // Connect each oscillator to its panner
-      oscLeft.connect(pannerLeft).connect(audioCtx.destination);
-      oscRight.connect(pannerRight).connect(audioCtx.destination);
     }
     initAudio();
 
-    function configureAudio() {
-      oscLeft.frequency.value = speaker1FrequencyInput.value;
-      oscRight.frequency.value = speaker2FrequencyInput.value;
+    function loadConfiguration() {
+      const properties = [
+        'speaker_1_frequency',
+        'speaker_2_frequency',
+        'speaker_1_start_frequency',
+        'speaker_2_start_frequency',
+        'speaker_1_stop_frequency',
+        'speaker_2_stop_frequency',
+        'sweep_duration',
+      ];
 
-      pannerLeft.pan.value = -1; // Hard left
-      pannerRight.pan.value = 1; // Hard right
+      configuration = {};
+      properties.forEach((property) => {
+        configuration[property] = document.getElementById(property).value;
+      });
+    }
+
+    function isConfigurationValid(speakerId) {
+      // speaker_id is 1 or 2
+      let keys = [];
+      if (pattern === 'constant') {
+        keys = [`speaker_${speakerId}_frequency`];
+      } else if (pattern === 'sweep') {
+        keys = [
+          `speaker_${speakerId}_start_frequency`,
+          `speaker_${speakerId}_stop_frequency`,
+        ];
+      }
+      const values = Array.from(keys, (key) => configuration[key]);
+      const checks = Array.from(values, (value) => isNumber(value));
+      return checks.some((check) => check);
+    }
+
+    function isNumber(value) {
+      return value.length > 0 && !isNaN(Number(value));
+    }
+
+    function configureAudio() {
+      loadConfiguration();
+
+      if (isConfigurationValid(1)) {
+        oscLeft = audioCtx.createOscillator();
+        configureOscillator(oscLeft, 1);
+
+        pannerLeft = audioCtx.createStereoPanner();
+        pannerLeft.pan.value = -1;
+
+        oscLeft.connect(pannerLeft).connect(audioCtx.destination);
+      } else {
+        oscLeft = null;
+        pannerLeft = null;
+      }
+
+      if (isConfigurationValid(2)) {
+        oscRight = audioCtx.createOscillator();
+        configureOscillator(oscRight, 2);
+
+        pannerRight = audioCtx.createStereoPanner();
+        pannerRight.pan.value = 1;
+
+        oscRight.connect(pannerRight).connect(audioCtx.destination);
+      } else {
+        oscRight = null;
+        pannerRight = null;
+      }
+    }
+
+    function configureOscillator(oscillator, speakerId) {
+      if (pattern === 'constant') {
+        oscillator.frequency.value = configuration[`speaker_${speakerId}_frequency`];
+      } else if (pattern === 'sweep') {
+        oscillator.frequency.setValueAtTime(
+          configuration[`speaker_${speakerId}_start_frequency`],
+          audioCtx.currentTime
+        );
+        oscillator.frequency.linearRampToValueAtTime(
+          configuration[`speaker_${speakerId}_stop_frequency`],
+          audioCtx.currentTime + Number(configuration['sweep_duration'])
+        );
+      }
     }
 
     function startPlaying() {
-      // Start both oscillators
-      oscLeft.start();
-      oscRight.start();
+      console.log(configuration);
+      console.log(oscRight);
+      if (oscLeft !== null) {
+        oscLeft.start();
+      };
+
+      if (oscRight !== null) {
+        oscRight.start();
+      }
     }
 
     function stopPlaying() {
-      oscLeft.stop();
-      oscRight.stop();
+      if (oscLeft !== null) {
+        oscLeft.stop();
+        oscLeft = null;
+      }
+
+      if (oscRight !== null) {
+        oscRight.stop();
+        oscRight = null;
+      }
     }
+
+    const settingsConstant = document.getElementById('settings_constant');
+    const settingsSweep = document.getElementById('settings_sweep')
+
+    document.querySelectorAll('input[name="pattern"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.id === 'pattern_constant') {
+          pattern = 'constant';
+          settingsConstant.hidden = false;
+          settingsSweep.hidden = true;
+        } else if (e.target.id === 'pattern_sweep') {
+          pattern = 'sweep';
+          settingsConstant.hidden = true;
+          settingsSweep.hidden = false;
+        }
+      });
+    });
   </script>
 </body>
 </html>
