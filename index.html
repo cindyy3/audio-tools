@@ -12,44 +12,71 @@
   <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
   <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
   <br>
-  <button id="startButton">Play Tones</button>
+  <button id="startButton">Start playing</button>
   
   <script>
-    document.getElementById('startButton').addEventListener('click', () => {
+    let isPlaying = false;
+    let audioCtx = null;
+    let oscLeft = null;
+    let oscRight = null;
+    let pannerLeft = null;
+    let pannerRight = null;
+
+    const speaker1FrequencyInput = document.getElementById('speaker_1_frequency');
+    const speaker2FrequencyInput = document.getElementById('speaker_2_frequency');
+    const startButton = document.getElementById('startButton');
+
+    startButton.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        initAudio();
+        configureAudio();
+        startPlaying();
+        startButton.innerText = 'Stop playing';
+      } else {
+        stopPlaying();
+        startButton.innerText = 'Start playing';
+      }
+    });
+
+    function initAudio() {
       // Create an audio context
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
       // Create first oscillator (for left speaker)
-      const speaker1FrequencyInput = document.getElementById('speaker_1_frequency');
-      const oscLeft = audioCtx.createOscillator();
-      oscLeft.frequency.value = speaker1FrequencyInput.value;
+      oscLeft = audioCtx.createOscillator();
 
       // Create second oscillator (for right speaker)
-      const speaker2FrequencyInput = document.getElementById('speaker_2_frequency');
-      const oscRight = audioCtx.createOscillator();
-      oscRight.frequency.value = speaker2FrequencyInput.value;
+      oscRight = audioCtx.createOscillator();
 
       // Create stereo panners
-      const pannerLeft = audioCtx.createStereoPanner();
-      pannerLeft.pan.value = -1; // Hard left
-
-      const pannerRight = audioCtx.createStereoPanner();
-      pannerRight.pan.value = 1; // Hard right
+      pannerLeft = audioCtx.createStereoPanner();
+      pannerRight = audioCtx.createStereoPanner();
 
       // Connect each oscillator to its panner
       oscLeft.connect(pannerLeft).connect(audioCtx.destination);
       oscRight.connect(pannerRight).connect(audioCtx.destination);
+    }
+    initAudio();
 
+    function configureAudio() {
+      oscLeft.frequency.value = speaker1FrequencyInput.value;
+      oscRight.frequency.value = speaker2FrequencyInput.value;
+
+      pannerLeft.pan.value = -1; // Hard left
+      pannerRight.pan.value = 1; // Hard right
+    }
+
+    function startPlaying() {
       // Start both oscillators
       oscLeft.start();
       oscRight.start();
+    }
 
-      // Stop after 2 seconds
-      setTimeout(() => {
-          oscLeft.stop();
-          oscRight.stop();
-      }, 2000);
-    });
+    function stopPlaying() {
+      oscLeft.stop();
+      oscRight.stop();
+    }
   </script>
 </body>
 </html>
