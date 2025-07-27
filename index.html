@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Tools</title>
+</head>
+<body>
+  <button id="startButton">Play Tones</button>
+  
+  <script>
+    document.getElementById('startButton').addEventListener('click', () => {
+      // Create an audio context
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Create first oscillator (for left speaker)
+      const oscLeft = audioCtx.createOscillator();
+      oscLeft.frequency.value = 440; // A4
+
+      // Create second oscillator (for right speaker)
+      const oscRight = audioCtx.createOscillator();
+      oscRight.frequency.value = 660; // E5
+
+      // Create stereo panners
+      const pannerLeft = audioCtx.createStereoPanner();
+      pannerLeft.pan.value = -1; // Hard left
+
+      const pannerRight = audioCtx.createStereoPanner();
+      pannerRight.pan.value = 1; // Hard right
+
+      // Connect each oscillator to its panner
+      oscLeft.connect(pannerLeft).connect(audioCtx.destination);
+      oscRight.connect(pannerRight).connect(audioCtx.destination);
+
+      // Start both oscillators
+      oscLeft.start();
+      oscRight.start();
+
+      // Stop after 2 seconds
+      setTimeout(() => {
+          oscLeft.stop();
+          oscRight.stop();
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
