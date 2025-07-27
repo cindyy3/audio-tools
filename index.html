@@ -4,16 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Audio Tools</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 </head>
 <body>
-  <label for="speaker_1_frequency">Speaker 1 frequency (Hz):</label>
-  <input type="text" id="speaker_1_frequency" name="speaker_1_frequency">
-  <br>
-  <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
-  <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
-  <br>
-  <button id="startButton">Start playing</button>
-  
+  <main class="container">
+    <label for="speaker_1_frequency">Speaker 1 frequency (Hz):</label>
+    <input type="text" id="speaker_1_frequency" name="speaker_1_frequency">
+    <br>
+    <label for="speaker_2_frequency">Speaker 2 frequency (Hz):</label>
+    <input type="text" id="speaker_2_frequency" name="speaker_2_frequency">
+    <br>
+    <button id="startButton">Start playing</button>
+  </main>
+
   <script>
     let isPlaying = false;
     let audioCtx = null;
