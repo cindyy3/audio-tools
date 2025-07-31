@@ -182,14 +182,22 @@
         const stopFreq = Number(configuration[`speaker_${speakerId}_stop_frequency2`]);
         const stepIncrement = Number(configuration['step_increment']);
         const stepDuration = Number(configuration['step_duration']);
-        const numSteps = Math.floor((stopFreq - startFreq) / stepIncrement);
-        console.log(numSteps)
-        for (const i = 0; i < (numSteps); i++) {
-          frequency = `speaker_${speakerId}_start_frequency2` + i * step_increment
-          oscillator.frequency.setValueAtTime(
-          configuration[frequency],
-          audioCtx.currentTime + i * Number(configuration['step_duration'])
-          );
+        let currentTime = audioCtx.currentTime;
+        let scheduledFrequency;
+
+        for (let i = 0; ; i++) {
+            scheduledFrequency = startFreq + (i * stepIncrement);
+
+            if (scheduledFrequency >= stopFreq) {
+                oscillator.frequency.setValueAtTime(stopFreq, currentTime + (i * stepDuration));
+                break;
+            }
+
+            oscillator.frequency.setValueAtTime(scheduledFrequency, currentTime + (i * stepDuration));
+
+            if (scheduledFrequency === stopFreq) {
+                break;
+            }
         }
       }
     }
