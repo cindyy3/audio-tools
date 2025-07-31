@@ -14,6 +14,8 @@
       <label htmlFor="pattern_constant">Constant</label>
       <input type="radio" id="pattern_sweep" name="pattern" />
       <label htmlFor="pattern_sweep">Sweep</label>
+      <input type="radio" id="pattern_steps" name="pattern" />
+      <label htmlFor="pattern_steps">Steps</label>
     </fieldset>
 
     <div id="settings_constant">
@@ -34,6 +36,21 @@
       <input type="text" id="speaker_2_stop_frequency" name="speaker_2_stop_frequency">
       <label for="sweep_duration">Sweep duration (sec):</label>
       <input type="text" id="sweep_duration" name="sweep_duration">
+    </div>
+
+    <div id="settings_steps" hidden>
+      <label for="speaker_1_start_frequency2">Speaker 1 start frequency (Hz):</label>
+      <input type="text" id="speaker_1_start_frequency2" name="speaker_1_start_frequency2">
+      <label for="speaker_1_stop_frequency2">Speaker 1 stop frequency (Hz):</label>
+      <input type="text" id="speaker_1_stop_frequency2" name="speaker_1_stop_frequency2">
+      <label for="speaker_2_start_frequency2">Speaker 2 start frequency (Hz):</label>
+      <input type="text" id="speaker_2_start_frequency2" name="speaker_2_start_frequency2">
+      <label for="speaker_2_stop_frequency2">Speaker 2 stop frequency (Hz):</label>
+      <input type="text" id="speaker_2_stop_frequency2" name="speaker_2_stop_frequency2">
+      <label for="sweep_duration">Step increment (Hz):</label>
+      <input type="text" id="step_increment" name="step_increment">
+      <label for="sweep_duration">Step duration (sec):</label>
+      <input type="text" id="step_duration" name="step_duration">
     </div>
 
     <button id="startButton">Start playing</button>
@@ -78,7 +95,13 @@
         'speaker_2_start_frequency',
         'speaker_1_stop_frequency',
         'speaker_2_stop_frequency',
+        'speaker_1_start_frequency2',
+        'speaker_2_start_frequency2',
+        'speaker_1_stop_frequency2',
+        'speaker_2_stop_frequency2',
         'sweep_duration',
+        'step_increment',
+        'step_duration'
       ];
 
       configuration = {};
@@ -96,6 +119,11 @@
         keys = [
           `speaker_${speakerId}_start_frequency`,
           `speaker_${speakerId}_stop_frequency`,
+        ];
+      } else if (pattern === 'steps') {
+        keys = [
+          `speaker_${speakerId}_start_frequency2`,
+          `speaker_${speakerId}_stop_frequency2`,
         ];
       }
       const values = Array.from(keys, (key) => configuration[key]);
@@ -149,6 +177,20 @@
           configuration[`speaker_${speakerId}_stop_frequency`],
           audioCtx.currentTime + Number(configuration['sweep_duration'])
         );
+      } else if (pattern === 'steps') {
+        const startFreq = Number(configuration[`speaker_${speakerId}_start_frequency2`]);
+        const stopFreq = Number(configuration[`speaker_${speakerId}_stop_frequency2`]);
+        const stepIncrement = Number(configuration['step_increment']);
+        const stepDuration = Number(configuration['step_duration']);
+        const numSteps = Math.floor((stopFreq - startFreq) / stepIncrement);
+        console.log(numSteps)
+        for (const i = 0; i < (numSteps); i++) {
+          frequency = `speaker_${speakerId}_start_frequency2` + i * step_increment
+          oscillator.frequency.setValueAtTime(
+          configuration[frequency],
+          audioCtx.currentTime + i * Number(configuration['step_duration'])
+          );
+        }
       }
     }
 
@@ -178,6 +220,7 @@
 
     const settingsConstant = document.getElementById('settings_constant');
     const settingsSweep = document.getElementById('settings_sweep')
+    const settingsSteps = document.getElementById('settings_steps')
 
     document.querySelectorAll('input[name="pattern"]').forEach(radio => {
       radio.addEventListener('change', (e) => {
@@ -185,10 +228,17 @@
           pattern = 'constant';
           settingsConstant.hidden = false;
           settingsSweep.hidden = true;
+          settingsSteps.hidden = true;
         } else if (e.target.id === 'pattern_sweep') {
           pattern = 'sweep';
           settingsConstant.hidden = true;
           settingsSweep.hidden = false;
+          settingsSteps.hidden = true;
+        } else if (e.target.id === 'pattern_steps') {
+          pattern = 'steps';
+          settingsConstant.hidden = true;
+          settingsSweep.hidden = true;
+          settingsSteps.hidden = false;
         }
       });
     });
