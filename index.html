@@ -51,6 +51,8 @@
       <input type="text" id="step_increment" name="step_increment">
       <label for="sweep_duration">Step duration (sec):</label>
       <input type="text" id="step_duration" name="step_duration">
+      <label for="pause_duration">Pause duration (sec):</label>
+      <input type="text" id="pause_duration" name="pause_duration">
     </div>
 
     <button id="startButton">Start playing</button>
@@ -64,6 +66,8 @@
     let oscRight = null;
     let pannerLeft = null;
     let pannerRight = null;
+    let stepTimeouts = [];
+    let loopInterval = null;
 
     let configuration = {};
     const startButton = document.getElementById('startButton');
@@ -101,7 +105,8 @@
         'speaker_2_stop_frequency2',
         'sweep_duration',
         'step_increment',
-        'step_duration'
+        'step_duration',
+        'pause_duration'
       ];
 
       configuration = {};
@@ -137,6 +142,10 @@
 
     function configureAudio() {
       loadConfiguration();
+
+      if (pattern === 'steps') {
+        return;
+      }
 
       if (isConfigurationValid(1)) {
         oscLeft = audioCtx.createOscillator();
@@ -177,45 +186,110 @@
           configuration[`speaker_${speakerId}_stop_frequency`],
           audioCtx.currentTime + Number(configuration['sweep_duration'])
         );
-      } else if (pattern === 'steps') {
-        const startFreq = Number(configuration[`speaker_${speakerId}_start_frequency2`]);
-        const stopFreq = Number(configuration[`speaker_${speakerId}_stop_frequency2`]);
-        const stepIncrement = Number(configuration['step_increment']);
-        const stepDuration = Number(configuration['step_duration']);
-        let scheduledFrequency;
-        let time = 0;
+      }
+    }
 
-        oscillator.start(audioCtx.currentTime); 
+    function playStepTone(frequency, duration, pan, fadeInDuration = 0.035, fadeOutDuration = 0.035) {
+      const osc = audioCtx.createOscillator();
+      const panner = audioCtx.createStereoPanner();
+      const gainNode = audioCtx.createGain();
 
-        for (let i = 0; ; i++) {
-            scheduledFrequency = startFreq + (i * stepIncrement);
+      osc.connect(gainNode);
+      gainNode.connect(panner);
+      panner.connect(audioCtx.destination);
+      
+      osc.frequency.value = frequency;
+      panner.pan.value = pan;
 
-            oscillator.frequency.setValueAtTime(scheduledFrequency, audioCtx.currentTime + time);
+      const currentTime = audioCtx.currentTime;
 
-            if (scheduledFrequency >= stopFreq) {
-                oscillator.frequency.setValueAtTime(stopFreq, audioCtx.currentTime + time);
-                oscillator.stop(audioCtx.currentTime + time + stepDuration);
-                break;
+      gainNode.gain.setValueAtTime(0, currentTime);
+      gainNode.gain.linearRampToValueAtTime(1, currentTime + fadeInDuration);
+
+      const fadeOutStartTime = currentTime + duration - fadeOutDuration;
+
+      gainNode.gain.linearRampToValueAtTime(1, fadeOutStartTime);
+      gainNode.gain.linearRampToValueAtTime(0, currentTime + duration);
+
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function scheduleSteps() {
+      const startFreq = Number(configuration['speaker_1_start_frequency2']);
+      let stopFreq = Number(configuration['speaker_1_stop_frequency2']);
+      const stepIncrement = Number(configuration['step_increment']);
+      const stepDuration = Number(configuration['step_duration']);
+      const pauseDuration = Number(configuration['pause_duration']);
+      var runStepSequence = () => {};
+
+      if (stopFreq === 0) {
+        runStepSequence = () => {
+          stepTimeouts.forEach(timeout => clearTimeout(timeout));
+          stepTimeouts = [];
+
+          let time = 0;
+
+          if (isPlaying) {
+            const timeout = setTimeout(() => {
+              playStepTone(startFreq, stepDuration, -1);
+            }, time * 1000);
+            stepTimeouts.push(timeout);
+          }
+          time += stepDuration + pauseDuration;
+        };
+        
+        var totalSequenceDuration = stepDuration + pauseDuration;
+        
+      } else {
+        runStepSequence = () => {
+          stepTimeouts.forEach(timeout => clearTimeout(timeout));
+          stepTimeouts = [];
+
+          let time = 0;
+
+          for (let freq = startFreq; freq <= stopFreq; freq += stepIncrement) {
+            if (isPlaying) {
+              const timeout = setTimeout(() => {
+                playStepTone(freq, stepDuration, -1);
+              }, time * 1000);
+              stepTimeouts.push(timeout);
             }
+            time += stepDuration + pauseDuration;
+          }
+        };
 
-            time += stepDuration;
+        var totalSequenceDuration = 0;
+        for (let freq = startFreq; freq <= stopFreq; freq += stepIncrement) {
+          totalSequenceDuration += stepDuration + pauseDuration;
+        }
+      }
+      runStepSequence();
+      loopInterval = setInterval(runStepSequence, totalSequenceDuration * 1000);
+    }
+
+    function startPlaying() {
+      if (pattern === 'steps') {
+        scheduleSteps();
+      } else {
+        if (oscLeft !== null) {
+          oscLeft.start();
+        }
+
+        if (oscRight !== null) {
+          oscRight.start();
         }
       }
     }
 
-    function startPlaying() {
-      console.log(configuration);
-      console.log(oscRight);
-      if (oscLeft !== null) {
-        oscLeft.start();
-      };
-
-      if (oscRight !== null) {
-        oscRight.start();
-      }
-    }
-
     function stopPlaying() {
+      stepTimeouts.forEach(timeout => clearTimeout(timeout));
+      stepTimeouts = [];
+      if (loopInterval) {
+        clearInterval(loopInterval);
+        loopInterval = null;
+      }
+
       if (oscLeft !== null) {
         oscLeft.stop();
         oscLeft = null;
