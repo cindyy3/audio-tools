@@ -216,56 +216,90 @@
     }
 
     function scheduleSteps() {
-      const startFreq = Number(configuration['speaker_1_start_frequency2']);
-      let stopFreq = Number(configuration['speaker_1_stop_frequency2']);
+      const startFreq1 = Number(configuration['speaker_1_start_frequency2']);
+      let stopFreq1 = Number(configuration['speaker_1_stop_frequency2']);
+      const startFreq2 = Number(configuration['speaker_2_start_frequency2']);
+      let stopFreq2 = Number(configuration['speaker_2_stop_frequency2']);
       const stepIncrement = Number(configuration['step_increment']);
       const stepDuration = Number(configuration['step_duration']);
       const pauseDuration = Number(configuration['pause_duration']);
       var runStepSequence = () => {};
+      const hasSpeaker1 = isConfigurationValid(1);
+      const hasSpeaker2 = isConfigurationValid(2);
 
-      if (stopFreq === 0) {
-        runStepSequence = () => {
-          stepTimeouts.forEach(timeout => clearTimeout(timeout));
-          stepTimeouts = [];
+      var runStepSequence = () => {
+        stepTimeouts.forEach(timeout => clearTimeout(timeout));
+        stepTimeouts = [];
 
-          let time = 0;
+        let time = 0;
 
-          if (isPlaying) {
-            const timeout = setTimeout(() => {
-              playStepTone(startFreq, stepDuration, -1);
-            }, time * 1000);
-            stepTimeouts.push(timeout);
-          }
-          time += stepDuration + pauseDuration;
-        };
-        
-        var totalSequenceDuration = stepDuration + pauseDuration;
-        
-      } else {
-        runStepSequence = () => {
-          stepTimeouts.forEach(timeout => clearTimeout(timeout));
-          stepTimeouts = [];
-
-          let time = 0;
-
-          for (let freq = startFreq; freq <= stopFreq; freq += stepIncrement) {
+        if (hasSpeaker1) {
+          if (stopFreq1 === 0) {
             if (isPlaying) {
               const timeout = setTimeout(() => {
-                playStepTone(freq, stepDuration, -1);
+                playStepTone(startFreq1, stepDuration, -1);
               }, time * 1000);
               stepTimeouts.push(timeout);
             }
-            time += stepDuration + pauseDuration;
+          } else {
+            for (let freq = startFreq1; freq <= stopFreq1; freq += stepIncrement) {
+              if (isPlaying) {
+                const timeout = setTimeout(() => {
+                  playStepTone(freq, stepDuration, -1);
+                }, time * 1000);
+                stepTimeouts.push(timeout);
+              }
+              time += stepDuration + pauseDuration;
+            }
+            time = 0;
+          }
+        }
+
+        if (hasSpeaker2) {
+          if (stopFreq2 === 0) {
+            if (isPlaying) {
+              const timeout = setTimeout(() => {
+                playStepTone(startFreq2, stepDuration, -1);
+              }, time * 1000);
+              stepTimeouts.push(timeout);
+            }
+          } else {
+            for (let freq = startFreq2; freq <= stopFreq2; freq += stepIncrement) {
+              if (isPlaying) {
+                const timeout = setTimeout(() => {
+                  playStepTone(freq, stepDuration, -1);
+                }, time * 1000);
+                stepTimeouts.push(timeout);
+              }
+              time += stepDuration + pauseDuration;
+            }
+            time = 0;
           }
         };
-
-        var totalSequenceDuration = 0;
-        for (let freq = startFreq; freq <= stopFreq; freq += stepIncrement) {
-          totalSequenceDuration += stepDuration + pauseDuration;
-        }
       }
+
+      var totalSequenceDuration = 0;
+      if (hasSpeaker1) {
+        totalSequenceDuration = calculateDuration(startFreq1, stopFreq1, stepDuration, pauseDuration, stepIncrement)
+      }
+      if (hasSpeaker2) {
+        totalSequenceDuration = calculateDuration(startFreq2, stopFreq2, stepDuration, pauseDuration, stepIncrement)
+      }
+      
       runStepSequence();
       loopInterval = setInterval(runStepSequence, totalSequenceDuration * 1000);
+    }
+
+    function calculateDuration(startFreq, stopFreq, stepDuration, pauseDuration, stepIncrement) {
+      if (stopFreq === 0) {
+        return stepDuration + pauseDuration;
+      }
+
+      var totalSequenceDuration = 0;
+      for (let freq = startFreq; freq <= stopFreq; freq += stepIncrement) {
+        totalSequenceDuration += stepDuration + pauseDuration;
+      }
+      return totalSequenceDuration;
     }
 
     function startPlaying() {
