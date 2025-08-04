@@ -259,7 +259,7 @@
           if (stopFreq2 === 0) {
             if (isPlaying) {
               const timeout = setTimeout(() => {
-                playStepTone(startFreq2, stepDuration, -1);
+                playStepTone(startFreq2, stepDuration, 1);
               }, time * 1000);
               stepTimeouts.push(timeout);
             }
@@ -267,7 +267,7 @@
             for (let freq = startFreq2; freq <= stopFreq2; freq += stepIncrement) {
               if (isPlaying) {
                 const timeout = setTimeout(() => {
-                  playStepTone(freq, stepDuration, -1);
+                  playStepTone(freq, stepDuration, 1);
                 }, time * 1000);
                 stepTimeouts.push(timeout);
               }
